@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+<title>LexBuscador Honduras</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg:       #0f0f12;
+  --surface:  #1a1a20;
+  --card:     #21222b;
+  --border:   #2e2f3d;
+  --gold:     #c9a84c;
+  --gold-dim: #8a6e2f;
+  --text:     #e8e6de;
+  --muted:    #7a7890;
+  --accent:   #3d6b8f;
+  --danger:   #8f3d3d;
+  --green:    #3d8f5a;
+  --green-lt: #b8eecb;
+  --radius:   14px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  height: 100%; overflow: hidden;
+  background: var(--bg); color: var(--text);
+  font-family: 'DM Sans', sans-serif; font-size: 15px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ── LAYOUT ── */
+#app { display: flex; flex-direction: column; height: 100%; }
+
+/* ── HEADER ── */
+header {
+  background: var(--surface); border-bottom: 1px solid var(--border);
+  padding: 14px 18px 10px; flex-shrink: 0;
+}
+.header-row { display: flex; align-items: center; justify-content: space-between; }
+.brand { display: flex; align-items: baseline; gap: 6px; }
+.brand-name { font-family:'Playfair Display',serif; font-size:22px; color:var(--gold); letter-spacing:-0.3px; }
+.brand-tag { font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:1.5px; font-weight:500; }
+.law-counter { background:var(--gold-dim); color:var(--gold); font-size:11px; font-weight:600; padding:3px 10px; border-radius:20px; }
+
+/* ── SYNC BAR ── */
+#syncBar {
+  background: var(--surface); border-bottom: 1px solid var(--border);
+  padding: 8px 16px; font-size: 12px; display: flex;
+  align-items: center; gap: 8px; flex-shrink: 0;
+}
+#syncBar.hidden { display: none; }
+.sync-spinner {
+  width: 14px; height: 14px; border: 2px solid var(--border);
+  border-top-color: var(--gold); border-radius: 50%;
+  animation: spin .7s linear infinite; flex-shrink: 0;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+#syncText { color: var(--muted); flex: 1; }
+#syncText strong { color: var(--gold); }
+.sync-ok { color: var(--green) !important; }
+.sync-err { color: #e07070 !important; }
+
+/* ── TABS ── */
+.tabs {
+  display: flex; background: var(--surface);
+  border-bottom: 1px solid var(--border); flex-shrink: 0;
+}
+.tab {
+  flex: 1; text-align: center; padding: 11px 0;
+  font-size: 13px; font-weight: 500; color: var(--muted);
+  cursor: pointer; border-bottom: 2px solid transparent;
+  transition: color .2s, border-color .2s;
+}
+.tab.active { color: var(--gold); border-bottom-color: var(--gold); }
+
+/* ── PANELS ── */
+.panel { flex: 1; overflow-y: auto; display: none; flex-direction: column; }
+.panel.active { display: flex; }
+
+/* ── SEARCH PANEL ── */
+.search-box {
+  padding: 14px 16px 10px; background: var(--surface);
+  border-bottom: 1px solid var(--border); flex-shrink: 0;
+}
+.search-input-wrap {
+  display: flex; align-items: center;
+  background: var(--card); border: 1.5px solid var(--border);
+  border-radius: var(--radius); overflow: hidden; transition: border-color .2s;
+}
+.search-input-wrap:focus-within { border-color: var(--gold-dim); }
+.search-input-wrap svg { margin: 0 12px; flex-shrink: 0; }
+#searchInput {
+  flex: 1; background: none; border: none; outline: none;
+  color: var(--text); font-family: inherit; font-size: 15px;
+  padding: 13px 0; caret-color: var(--gold);
+}
+#searchInput::placeholder { color: var(--muted); }
+#btnSearch {
+  background: var(--gold); color: #0f0f12; border: none;
+  padding: 0 18px; height: 100%; font-family: inherit;
+  font-size: 13px; font-weight: 600; cursor: pointer; transition: background .15s;
+}
+#btnSearch:active { background: var(--gold-dim); }
+.search-meta {
+  padding: 8px 16px 6px; font-size: 12px; color: var(--muted);
+  display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;
+}
+.result-count { color: var(--gold); font-weight: 600; }
+
+/* ── RESULTS ── */
+#resultsList { flex: 1; overflow-y: auto; padding: 8px 12px 80px; }
+.result-card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--radius); margin-bottom: 10px; overflow: hidden;
+  animation: fadeIn .22s ease;
+}
+@keyframes fadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:none; } }
+.result-header {
+  padding: 10px 14px; display: flex; justify-content: space-between;
+  align-items: flex-start; gap: 8px; border-bottom: 1px solid var(--border);
+}
+.result-law { font-size:11px; color:var(--gold); font-weight:600; text-transform:uppercase; letter-spacing:.8px; line-height:1.4; flex:1; }
+.result-article { background:var(--accent); color:#b8d4ee; font-size:11px; font-weight:600; padding:3px 9px; border-radius:20px; white-space:nowrap; flex-shrink:0; }
+.result-article.no-art { background:var(--border); color:var(--muted); }
+.result-page { font-size:10px; color:var(--muted); padding:4px 14px; font-style:italic; }
+.result-body { padding:10px 14px 12px; font-size:13.5px; color:#cccac0; line-height:1.65; }
+.result-body mark { background:#c9a84c33; color:var(--gold); border-radius:3px; padding:0 2px; font-weight:600; }
+
+/* ── EMPTY STATES ── */
+.empty-state {
+  flex:1; display:flex; flex-direction:column; align-items:center;
+  justify-content:center; gap:12px; padding:40px 24px; text-align:center;
+}
+.empty-icon { font-size:48px; opacity:.35; }
+.empty-title { font-family:'Playfair Display',serif; font-size:19px; color:var(--text); }
+.empty-sub { font-size:13px; color:var(--muted); line-height:1.6; }
+
+/* ── LEYES PANEL ── */
+#leyesPanel { padding-bottom: 20px; }
+.section-title {
+  font-size:11px; font-weight:600; color:var(--muted);
+  text-transform:uppercase; letter-spacing:1.2px;
+  padding: 14px 16px 6px;
+}
+
+/* ── LEY ITEMS ── */
+.leyes-list { padding: 0 12px 12px; }
+.ley-item {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--radius); margin-bottom: 8px;
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 14px; animation: fadeIn .2s ease;
+}
+.ley-icon { font-size:24px; flex-shrink:0; }
+.ley-info { flex:1; min-width:0; }
+.ley-name { font-size:13.5px; font-weight:500; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.ley-meta { font-size:11px; color:var(--muted); margin-top:3px; }
+.ley-status { font-size:10px; font-weight:600; margin-top:4px; }
+.ley-status.cached   { color: #6ec98f; }
+.ley-status.loading  { color: var(--gold); }
+.ley-status.error    { color: #e07070; }
+.ley-del {
+  background:none; border:none; color:var(--danger);
+  font-size:20px; cursor:pointer; padding:4px; flex-shrink:0; line-height:1;
+}
+
+/* ── DESCARGA INLINE ── */
+.ley-progress-wrap { height:3px; background:var(--border); border-radius:2px; margin-top:6px; overflow:hidden; }
+.ley-progress-bar { height:100%; background:var(--gold); border-radius:2px; transition:width .2s; width:0%; }
+
+/* ── MANUAL UPLOAD ── */
+.manual-section {
+  margin: 4px 12px 12px;
+  border: 1.5px dashed var(--border); border-radius: var(--radius);
+  padding: 16px; cursor: pointer; transition: border-color .2s, background .2s;
+  display: flex; align-items: center; gap: 12px;
+}
+.manual-section:active { border-color:var(--gold); background:#c9a84c08; }
+.manual-icon { font-size:22px; flex-shrink:0; }
+.manual-text { font-size:13px; color:var(--muted); line-height:1.5; }
+.manual-text strong { color:var(--gold); }
+#fileInput { display:none; }
+
+/* ── MODAL OVERLAY (procesando) ── */
+#overlay {
+  display:none; position:fixed; inset:0;
+  background:#0009; z-index:100;
+  align-items:center; justify-content:center;
+}
+#overlay.show { display:flex; }
+.progress-box {
+  background:var(--card); border:1px solid var(--border);
+  border-radius:18px; padding:28px 32px; min-width:260px; text-align:center;
+}
+.progress-title { font-family:'Playfair Display',serif; font-size:17px; color:var(--gold); margin-bottom:6px; }
+.progress-sub { font-size:13px; color:var(--muted); margin-bottom:18px; }
+.progress-bar-wrap { height:6px; background:var(--border); border-radius:3px; overflow:hidden; }
+.progress-bar { height:100%; background:var(--gold); border-radius:3px; transition:width .25s; width:0%; }
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar { width:4px; }
+::-webkit-scrollbar-track { background:transparent; }
+::-webkit-scrollbar-thumb { background:var(--border); border-radius:4px; }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- HEADER -->
+  <header>
+    <div class="header-row">
+      <div class="brand">
+        <span class="brand-name">⚖ LexBuscador</span>
+        <span class="brand-tag">Honduras</span>
+      </div>
+      <span class="law-counter" id="lawCounter">0 leyes</span>
+    </div>
+  </header>
+
+  <!-- BARRA DE SINCRONIZACIÓN -->
+  <div id="syncBar">
+    <div class="sync-spinner" id="syncSpinner"></div>
+    <span id="syncText">Verificando leyes disponibles…</span>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs">
+    <div class="tab active" data-panel="buscar">🔍 Buscar</div>
+    <div class="tab" data-panel="leyes">📚 Mis Leyes</div>
+  </div>
+
+  <!-- ══ PANEL BUSCAR ══ -->
+  <div class="panel active" id="buscarPanel">
+    <div class="search-box">
+      <div class="search-input-wrap">
+        <svg width="16" height="16" fill="none" stroke="#7a7890" stroke-width="2" viewBox="0 0 24 24">
+          <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+        </svg>
+        <input id="searchInput" type="search" placeholder="Buscar en todas las leyes…" autocomplete="off"/>
+        <button id="btnSearch">Buscar</button>
+      </div>
+    </div>
+    <div class="search-meta" id="searchMeta" style="display:none">
+      <span id="searchMetaText"></span>
+    </div>
+    <div id="resultsList">
+      <div class="empty-state" id="emptySearch">
+        <div class="empty-icon">📖</div>
+        <div class="empty-title">Busca en tus leyes</div>
+        <div class="empty-sub">Ingresa una palabra o frase. Los resultados mostrarán el artículo completo y la ley correspondiente.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ PANEL LEYES ══ -->
+  <div class="panel" id="leyesPanel">
+    <!-- Lista de leyes del servidor -->
+    <div class="section-title">Leyes disponibles</div>
+    <div class="leyes-list" id="leyesList">
+      <div class="empty-state" id="emptyLeyes">
+        <div class="empty-icon">⚖️</div>
+        <div class="empty-title">Sin leyes cargadas</div>
+        <div class="empty-sub">Las leyes se descargan automáticamente desde el servidor. Verifica tu conexión.</div>
+      </div>
+    </div>
+
+    <!-- Subida manual (admin) -->
+    <div class="section-title">Agregar ley manualmente</div>
+    <div class="manual-section" id="addZone">
+      <div class="manual-icon">📄</div>
+      <div class="manual-text">
+        <strong>Seleccionar PDF</strong><br/>
+        Para uso local o pruebas sin servidor
+      </div>
+    </div>
+    <input type="file" id="fileInput" accept="application/pdf" multiple/>
+  </div>
+
+</div><!-- /#app -->
+
+<!-- MODAL PROCESANDO -->
+<div id="overlay">
+  <div class="progress-box">
+    <div class="progress-title" id="overlayTitle">Procesando PDF</div>
+    <div class="progress-sub" id="overlaySub">Extrayendo texto…</div>
+    <div class="progress-bar-wrap"><div class="progress-bar" id="progressBar"></div></div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+'use strict';
+pdfjsLib.GlobalWorkerOptions.workerSrc =
+  'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+// ══════════════════════════════════════════════
+// CONFIGURACIÓN — edita solo esta sección
+// ══════════════════════════════════════════════
+const CONFIG = {
+  // URL del archivo leyes.json relativa al index.html
+  // Si están en la misma carpeta, déjalo así:
+  manifestUrl: 'leyes.json',
+};
+
+// ══════════════════════════════════════════════
+// INDEXEDDB
+// ══════════════════════════════════════════════
+const DB_NAME = 'LexBuscadorDB_v2';
+const DB_VER  = 1;
+const STORE   = 'leyes';
+let db;
+
+function openDB() {
+  return new Promise((res, rej) => {
+    const req = indexedDB.open(DB_NAME, DB_VER);
+    req.onupgradeneeded = e => {
+      const d = e.target.result;
+      if (!d.objectStoreNames.contains(STORE))
+        d.createObjectStore(STORE, { keyPath: 'id' });
+    };
+    req.onsuccess = e => res(e.target.result);
+    req.onerror   = e => rej(e.target.error);
+  });
+}
+const dbOp = (mode, fn) => new Promise((res, rej) => {
+  const tx  = db.transaction(STORE, mode);
+  const st  = tx.objectStore(STORE);
+  const req = fn(st);
+  req.onsuccess = e => res(e.target.result);
+  req.onerror   = e => rej(e.target.error);
+});
+const dbGetAll  = ()       => dbOp('readonly',  s => s.getAll());
+const dbGet     = id       => dbOp('readonly',  s => s.get(id));
+const dbPut     = record   => dbOp('readwrite', s => s.put(record));
+const dbDelete  = id       => dbOp('readwrite', s => s.delete(id));
+
+// ══════════════════════════════════════════════
+// ESTADO
+// ══════════════════════════════════════════════
+let leyes    = [];   // registros cargados en memoria
+let manifest = [];   // lista del servidor
+
+// ══════════════════════════════════════════════
+// EXTRACCIÓN DE PDF
+// ══════════════════════════════════════════════
+async function extractPages(source, onProgress) {
+  // source puede ser ArrayBuffer o URL string
+  const loadTask = typeof source === 'string'
+    ? pdfjsLib.getDocument(source)
+    : pdfjsLib.getDocument({ data: source });
+  const pdf   = await loadTask.promise;
+  const total = pdf.numPages;
+  const pages = [];
+  for (let i = 1; i <= total; i++) {
+    const page    = await pdf.getPage(i);
+    const content = await page.getTextContent();
+    const text    = content.items.map(it => it.str).join(' ');
+    pages.push({ num: i, text });
+    if (onProgress) onProgress(i / total);
+  }
+  return pages;
+}
+
+// ══════════════════════════════════════════════
+// ARTÍCULOS — detección y extracción completa
+// ══════════════════════════════════════════════
+const ART_RE = /(?:Art(?:ículo|iculo|\.°?|°|o\.?)\s*\d+[\w°\-\.]*|ARTÍCULO\s*\d+[\w°\-\.]*|ARTICULO\s*\d+[\w°\-\.]*)/gi;
+
+function getAllArticleMarkers(text) {
+  const markers = [];
+  const re = new RegExp(ART_RE.source, 'gi');
+  let m;
+  while ((m = re.exec(text)) !== null)
+    markers.push({ label: m[0].trim().replace(/\s+/g, ' '), index: m.index });
+  return markers;
+}
+
+function extractFullArticle(text, matchIndex, markers) {
+  if (!markers.length) return null;
+  let artIdx = -1;
+  for (let i = 0; i < markers.length; i++) {
+    if (markers[i].index <= matchIndex) artIdx = i;
+    else break;
+  }
+  if (artIdx === -1) return null;
+  const start = markers[artIdx].index;
+  const end   = artIdx + 1 < markers.length ? markers[artIdx + 1].index : text.length;
+  return {
+    articleLabel: markers[artIdx].label,
+    articleText:  text.slice(start, end).replace(/\s+/g, ' ').trim(),
+  };
+}
+
+function highlight(text, term) {
+  const esc = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return text.replace(new RegExp(esc, 'gi'), m => `<mark>${m}</mark>`);
+}
+
+// ══════════════════════════════════════════════
+// BÚSQUEDA
+// ══════════════════════════════════════════════
+function searchAll(term) {
+  const termLow = term.toLowerCase();
+  const results = [];
+  for (const ley of leyes) {
+    for (const page of ley.pages) {
+      const text    = page.text;
+      const textLow = text.toLowerCase();
+      const markers = getAllArticleMarkers(text);
+      const seenArt = new Set();
+      const seenSnp = new Set();
+      let idx = 0;
+      while ((idx = textLow.indexOf(termLow, idx)) !== -1) {
+        const found = extractFullArticle(text, idx, markers);
+        if (found) {
+          const key = `${ley.id}||${page.num}||${found.articleLabel}`;
+          if (!seenArt.has(key)) {
+            seenArt.add(key);
+            results.push({ law: ley.name, page: page.num, article: found.articleLabel, fullText: highlight(found.articleText, term), hasFullArt: true });
+          }
+        } else {
+          const s   = Math.max(0, idx - 300);
+          const e   = Math.min(text.length, idx + term.length + 300);
+          const snp = (s > 0 ? '…' : '') + text.slice(s, e).replace(/\s+/g,' ').trim() + (e < text.length ? '…' : '');
+          const key = snp.slice(0, 60);
+          if (!seenSnp.has(key)) {
+            seenSnp.add(key);
+            results.push({ law: ley.name, page: page.num, article: null, fullText: highlight(snp, term), hasFullArt: false });
+          }
+        }
+        idx += term.length;
+      }
+    }
+  }
+  return results;
+}
+
+// ══════════════════════════════════════════════
+// RENDER — Resultados
+// ══════════════════════════════════════════════
+function renderResults(results, term) {
+  const list    = document.getElementById('resultsList');
+  const meta    = document.getElementById('searchMeta');
+  const metaTxt = document.getElementById('searchMetaText');
+  list.innerHTML = '';
+  if (!results.length) {
+    meta.style.display = 'none';
+    list.innerHTML = `<div class="empty-state">
+      <div class="empty-icon">🔎</div>
+      <div class="empty-title">Sin resultados</div>
+      <div class="empty-sub">No se encontró "<strong>${term}</strong>" en ninguna de las leyes.</div></div>`;
+    return;
+  }
+  meta.style.display = 'flex';
+  metaTxt.innerHTML = `<span class="result-count">${results.length} resultado${results.length!==1?'s':''}</span> para "<strong>${term}</strong>"`;
+  results.forEach(r => {
+    const artClass = r.article ? 'result-article' : 'result-article no-art';
+    const artText  = r.article || 'Sin artículo';
+    const card = document.createElement('div');
+    card.className = 'result-card';
+    card.innerHTML = `
+      <div class="result-header">
+        <div class="result-law">${r.law}</div>
+        <div class="${artClass}">${artText}</div>
+      </div>
+      <div class="result-page">Página ${r.page}${r.hasFullArt?' · texto completo':''}</div>
+      <div class="result-body">${r.fullText}</div>`;
+    list.appendChild(card);
+  });
+}
+
+// ══════════════════════════════════════════════
+// RENDER — Lista de leyes
+// ══════════════════════════════════════════════
+function renderLeyes() {
+  const list    = document.getElementById('leyesList');
+  const counter = document.getElementById('lawCounter');
+  const cachedIds = new Set(leyes.map(l => l.id));
+  counter.textContent = `${leyes.length} le${leyes.length!==1?'yes':'y'}`;
+
+  // Combinar manifest + leyes manuales no en manifest
+  const manuales = leyes.filter(l => !manifest.find(m => m.id === l.id));
+  const items = [
+    ...manifest.map(m => ({ ...m, cached: cachedIds.has(m.id), fromServer: true })),
+    ...manuales.map(l => ({ ...l, cached: true, fromServer: false })),
+  ];
+
+  if (!items.length) {
+    list.innerHTML = '';
+    list.appendChild(document.getElementById('emptyLeyes'));
+    return;
+  }
+
+  list.innerHTML = '';
+  items.forEach(item => {
+    const cached = item.cached;
+    const div = document.createElement('div');
+    div.className = 'ley-item';
+    div.id = `ley-${item.id}`;
+    const fecha = item.dateAdded
+      ? new Date(item.dateAdded).toLocaleDateString('es-HN',{day:'2-digit',month:'short',year:'numeric'})
+      : '—';
+    const pages = leyes.find(l => l.id === item.id)?.pages?.length ?? '—';
+    div.innerHTML = `
+      <div class="ley-icon">${item.fromServer ? '🌐' : '📄'}</div>
+      <div class="ley-info">
+        <div class="ley-name" title="${item.name}">${item.name}</div>
+        <div class="ley-meta">${cached ? pages+' págs · '+fecha : 'Pendiente de descarga'}</div>
+        <div class="ley-status ${cached?'cached':'loading'}" id="status-${item.id}">
+          ${cached ? '✔ Disponible para búsqueda' : '⏳ Descargando…'}
+        </div>
+        <div class="ley-progress-wrap" id="pw-${item.id}" style="${cached?'display:none':''}">
+          <div class="ley-progress-bar" id="pb-${item.id}"></div>
+        </div>
+      </div>
+      <button class="ley-del" data-id="${item.id}" title="Eliminar de caché">✕</button>`;
+    list.appendChild(div);
+  });
+
+  list.querySelectorAll('.ley-del').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      if (!confirm('¿Eliminar esta ley del caché local?')) return;
+      const id = btn.dataset.id;
+      await dbDelete(id);
+      leyes = leyes.filter(l => l.id !== id);
+      renderLeyes();
+    });
+  });
+}
+
+// ══════════════════════════════════════════════
+// SINCRONIZACIÓN DESDE SERVIDOR
+// ══════════════════════════════════════════════
+function setSyncBar(msg, state='loading') {
+  const bar = document.getElementById('syncBar');
+  const sp  = document.getElementById('syncSpinner');
+  const tx  = document.getElementById('syncText');
+  bar.classList.remove('hidden');
+  sp.style.display = state === 'loading' ? 'block' : 'none';
+  tx.className = state === 'ok' ? 'sync-ok' : state === 'err' ? 'sync-err' : '';
+  tx.innerHTML = msg;
+  if (state !== 'loading') setTimeout(() => bar.classList.add('hidden'), 4000);
+}
+
+function setLeyStatus(id, msg, state, pct) {
+  const el = document.getElementById(`status-${id}`);
+  const pb = document.getElementById(`pb-${id}`);
+  const pw = document.getElementById(`pw-${id}`);
+  if (el) { el.textContent = msg; el.className = `ley-status ${state}`; }
+  if (pw && pct !== undefined) pw.style.display = pct >= 1 ? 'none' : '';
+  if (pb && pct !== undefined) pb.style.width = (pct*100).toFixed(0)+'%';
+}
+
+async function downloadAndCache(entry) {
+  const url = entry.file; // relativa al index.html
+  setLeyStatus(entry.id, '⬇ Descargando…', 'loading', 0);
+  try {
+    const resp = await fetch(url);
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const buf = await resp.arrayBuffer();
+    setLeyStatus(entry.id, '⚙ Indexando…', 'loading', 0.1);
+    const pages = await extractPages(buf, pct => setLeyStatus(entry.id, `⚙ Indexando… ${(pct*100).toFixed(0)}%`, 'loading', 0.1 + pct*0.9));
+    const record = { id: entry.id, name: entry.name, dateAdded: new Date().toISOString(), pages };
+    await dbPut(record);
+    leyes.push(record);
+    setLeyStatus(entry.id, '✔ Disponible para búsqueda', 'cached', 1);
+    // actualizar meta
+    const metaEl = document.querySelector(`#ley-${entry.id} .ley-meta`);
+    if (metaEl) metaEl.textContent = `${pages.length} págs · ${new Date().toLocaleDateString('es-HN',{day:'2-digit',month:'short',year:'numeric'})}`;
+    document.getElementById('lawCounter').textContent = `${leyes.length} le${leyes.length!==1?'yes':'y'}`;
+  } catch(e) {
+    console.error('Error descargando', entry.name, e);
+    setLeyStatus(entry.id, '✗ Error al descargar', 'error', 1);
+  }
+}
+
+async function syncFromServer() {
+  setSyncBar('Verificando leyes disponibles…');
+  try {
+    const resp = await fetch(CONFIG.manifestUrl + '?t=' + Date.now());
+    if (!resp.ok) throw new Error(`No se pudo leer leyes.json (HTTP ${resp.status})`);
+    manifest = await resp.json();
+  } catch(e) {
+    setSyncBar('⚠ No se pudo conectar al servidor', 'err');
+    renderLeyes();
+    return;
+  }
+
+  const cachedIds = new Set(leyes.map(l => l.id));
+  const pending   = manifest.filter(m => !cachedIds.has(m.id));
+
+  renderLeyes(); // muestra el estado inicial con pendientes
+
+  if (!pending.length) {
+    setSyncBar(`✔ Todas las leyes están actualizadas (${manifest.length})`, 'ok');
+    return;
+  }
+
+  setSyncBar(`⬇ Descargando <strong>${pending.length}</strong> ley${pending.length!==1?'es':''} nueva${pending.length!==1?'s':''}…`);
+
+  // Descargar secuencialmente para no saturar
+  for (const entry of pending) {
+    await downloadAndCache(entry);
+  }
+
+  const errores = pending.filter(e => !leyes.find(l => l.id === e.id)).length;
+  if (errores) {
+    setSyncBar(`⚠ Sincronizado con ${errores} error${errores!==1?'es':''}`, 'err');
+  } else {
+    setSyncBar(`✔ Sincronización completa — ${leyes.length} ley${leyes.length!==1?'es':''} disponibles`, 'ok');
+  }
+}
+
+// ══════════════════════════════════════════════
+// SUBIDA MANUAL (admin / local)
+// ══════════════════════════════════════════════
+function showOverlay(title, sub) {
+  document.getElementById('overlayTitle').textContent = title;
+  document.getElementById('overlaySub').textContent   = sub;
+  document.getElementById('progressBar').style.width  = '0%';
+  document.getElementById('overlay').classList.add('show');
+}
+function setOverlayProgress(pct) {
+  document.getElementById('progressBar').style.width = (pct*100).toFixed(0)+'%';
+  document.getElementById('overlaySub').textContent  = `Indexando… ${(pct*100).toFixed(0)}%`;
+}
+function hideOverlay() { document.getElementById('overlay').classList.remove('show'); }
+
+async function processFile(file) {
+  const name = file.name.replace(/\.pdf$/i,'').replace(/_/g,' ');
+  const id   = 'manual-' + name.toLowerCase().replace(/\s+/g,'-');
+  if (leyes.find(l => l.id === id)) { alert(`"${name}" ya está en la biblioteca.`); return; }
+  showOverlay('Procesando', name);
+  try {
+    const buf   = await file.arrayBuffer();
+    const pages = await extractPages(buf, setOverlayProgress);
+    const record = { id, name, dateAdded: new Date().toISOString(), pages };
+    await dbPut(record);
+    leyes.push(record);
+    renderLeyes();
+  } catch(e) {
+    alert(`Error procesando "${name}": ${e.message}`);
+  } finally { hideOverlay(); }
+}
+
+// ══════════════════════════════════════════════
+// TABS
+// ══════════════════════════════════════════════
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    const id = tab.dataset.panel;
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById(id+'Panel').classList.add('active');
+  });
+});
+
+// ══════════════════════════════════════════════
+// EVENTOS BÚSQUEDA
+// ══════════════════════════════════════════════
+function doSearch() {
+  const term = document.getElementById('searchInput').value.trim();
+  if (!term) return;
+  if (!leyes.length) { alert('Las leyes aún se están descargando. Espera un momento.'); return; }
+  renderResults(searchAll(term), term);
+}
+document.getElementById('btnSearch').addEventListener('click', doSearch);
+document.getElementById('searchInput').addEventListener('keydown', e => { if(e.key==='Enter') doSearch(); });
+
+// ══════════════════════════════════════════════
+// EVENTOS ARCHIVO MANUAL
+// ══════════════════════════════════════════════
+const addZone   = document.getElementById('addZone');
+const fileInput = document.getElementById('fileInput');
+addZone.addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', async () => {
+  for (const f of [...fileInput.files]) await processFile(f);
+  fileInput.value = '';
+});
+
+// ══════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════
+(async () => {
+  db    = await openDB();
+  leyes = await dbGetAll();
+  renderLeyes();
+  await syncFromServer();
+})();
+</script>
+</body>
+</html>
