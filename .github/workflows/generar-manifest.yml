@@ -1,0 +1,68 @@
+name: Generar leyes.json automáticamente
+
+on:
+  push:
+    paths:
+      - 'leyes/**'   # Se activa solo cuando cambia algo en la carpeta leyes/
+
+jobs:
+  generar-manifest:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # Necesario para hacer commit automático
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Generar leyes.json desde los PDFs
+        run: |
+          python3 << 'EOF'
+          import os, json, re
+
+          carpeta = "leyes"
+          salida  = "leyes.json"
+
+          def nombre_legible(filename):
+              # Quita la extensión
+              name = os.path.splitext(filename)[0]
+              # Reemplaza guiones y guiones bajos por espacios
+              name = name.replace("-", " ").replace("_", " ")
+              # Capitaliza cada palabra respetando tildes
+              return name.title()
+
+          def hacer_id(filename):
+              name = os.path.splitext(filename)[0]
+              # Minúsculas, solo letras, números y guiones
+              name = name.lower().replace(" ", "-").replace("_", "-")
+              name = re.sub(r'[^a-z0-9\-]', '', name)
+              return name
+
+          pdfs = sorted([
+              f for f in os.listdir(carpeta)
+              if f.lower().endswith(".pdf")
+          ])
+
+          leyes = []
+          for pdf in pdfs:
+              leyes.append({
+                  "id":   hacer_id(pdf),
+                  "name": nombre_legible(pdf),
+                  "file": f"{carpeta}/{pdf}"
+              })
+
+          with open(salida, "w", encoding="utf-8") as f:
+              json.dump(leyes, f, ensure_ascii=False, indent=2)
+
+          print(f"✔ leyes.json generado con {len(leyes)} entrada(s):")
+          for l in leyes:
+              print(f"  - {l['name']}  →  {l['file']}")
+          EOF
+
+      - name: Guardar leyes.json en el repositorio
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add leyes.json
+          git diff --cached --quiet || git commit -m "🤖 Actualizar leyes.json automáticamente"
+          git push
