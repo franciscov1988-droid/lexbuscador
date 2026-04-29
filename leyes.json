@@ -1,0 +1,17 @@
+[
+  {
+    "id": "codigo-trabajo",
+    "name": "Código de Trabajo",
+    "file": "leyes/codigo-trabajo.pdf"
+  },
+  {
+    "id": "codigo-penal",
+    "name": "Código Penal",
+    "file": "leyes/codigo-penal.pdf"
+  },
+  {
+    "id": "constitucion",
+    "name": "Constitución de la República",
+    "file": "leyes/constitucion.pdf"
+  }
+]
